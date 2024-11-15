@@ -1,3 +1,68 @@
+const offlineDuration = 2 * 24 * 60 * 60 * 1000; // Dois dias em milissegundos
+
+// Verificar se o prazo já começou
+const startTime = localStorage.getItem('startTime');
+
+if (!startTime) {
+    // Salvar o tempo inicial se não estiver definido
+    localStorage.setItem('startTime', Date.now());
+} else {
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - startTime;
+
+    if (elapsedTime > offlineDuration) {
+        alert('Seu prazo offline acabou. Por favor, ative os dados móveis.');
+        // Lógica para redirecionar ou bloquear o site
+        localStorage.removeItem('startTime'); // Reiniciar o prazo
+    }
+}
+if (!navigator.onLine) {
+    alert('Sem internet! Conecte-se para continuar.');
+    // Redirecionar para página de aviso
+    window.location.href = '/conecte-se.html';
+}
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/main.js')
+        .then(() => console.log('Service Worker registrado!'))
+        .catch(err => console.error('Erro ao registrar o Service Worker:', err));
+}
+const CACHE_NAME = 'my-site-cache-v1';
+const urlsToCache = ['index.html', 'style.css', 'main.js'];
+
+// Instalar o Service Worker
+self.addEventListener('install', event => {
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then(cache => {
+                console.log('Arquivos em cache');
+                return cache.addAll(urlsToCache);
+            })
+    );
+});
+
+// Interceptar solicitações
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                return response || fetch(event.request);
+            })
+    );
+});
+
+// Atualizar cache
+self.addEventListener('activate', event => {
+    const cacheWhitelist = [CACHE_NAME];
+    event.waitUntil(
+        caches.keys().then(keyList => {
+            return Promise.all(keyList.map(key => {
+                if (!cacheWhitelist.includes(key)) {
+                    return caches.delete(key);
+                }
+            }));
+        })
+    );
+});
 // globalConfig.js
 // ============================================================================
 // ============================================================================
